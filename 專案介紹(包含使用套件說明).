@@ -1,59 +1,26 @@
-import random
+# 多媒體期末專案_猜數字遊戲
 
-def guess_number_game():
-    print("--- 歡迎來到『終極密碼：生存戰』 ---")
-    
-    # 設定遊戲難度與參數
-    target = random.randint(1, 100)
-    stamina = 7  # 特色玩法 1：體力限制
-    hints_available = 2  # 特色玩法 2：有限的提示道具
-    low, high = 1, 100
-    
-    print(f"數字範圍在 {low} 到 {high} 之間。")
-    print(f"你有 {stamina} 點體力，每猜錯一次扣 1 點。")
-    print(f"輸入 'h' 可以使用提示（消耗 2 點體力，剩餘 {hints_available} 次）。")
+#專題簡介
+此專題是一個猜數字遊戲，包含2種特別的玩法(奇偶數猜測、顏色猜測)，擁有血量難度選擇，讓玩家能更有挑戰性。
+看到很多人選擇翻卡牌跟貪吃蛇，所以我決定用猜數字的遊戲去做改編，原先的猜數字遊戲只有猜錯扣心、縮小範圍而已，
+後來又先添加了奇數猜數字(後面才加上有偶數)，遊戲依序添加的順序為下面列點呈現：
+一般猜數字扣心縮小範圍->奇數猜測->顏色範圍猜測->血量選擇(難度)->添加先猜奇偶數(猜錯扣2顆心)->添加顏色模式猜錯扣2顆心(增加難度)
 
-    while stamina > 0:
-        print(f"\n目前範圍：{low} ~ {high} | 剩餘體力：{'❤️' * stamina}")
-        user_input = input("請輸入數字或指令: ").lower()
+# 玩法說明
+選擇難度：從血量 15（簡單）到 5（困難）中選擇。其中包含15、10、5給玩家選擇
 
-        # 特色功能：提示系統
-        if user_input == 'h':
-            if hints_available > 0 and stamina > 2:
-                hints_available -= 1
-                stamina -= 2
-                # 提供一個更小的範圍提示
-                new_gap = (high - low) // 4
-                hint_low = max(low, target - random.randint(0, new_gap))
-                hint_high = min(high, target + random.randint(0, new_gap))
-                print(f"【道具：偵查雷達】提示：數字大機率在 {hint_low} 到 {hint_high} 之間！")
-                continue
-            else:
-                print("體力不足以支付提示或道具已用完！")
-                continue
+三大模式：
+1、經典生存戰：無線索，純粹靠範圍縮小進行邏輯推論。
+2、屬性解碼戰：首輪需預測「奇偶數」，猜錯扣 2 顆心，猜對可獲得該屬性情報。
+3、色彩偵查戰：提供數字與顏色的對應矩陣，但難度極高，每次猜錯扣除 2 顆心。
+## 生存機制：輸入數字後，系統會提示「太大」或「太小」並縮小範圍，體力歸零則遊戲結束。
 
-        # 檢查輸入是否為數字
-        try:
-            guess = int(user_input)
-        except ValueError:
-            print("無效輸入，請輸入數字或 'h'。")
-            continue
+# 使用套件
+主要使用Random
+Random：Python內建套件。用於生成目標數字、在色彩模式中隨機分配顏色給數字，以及隨機決定色彩偵查戰的起始範圍。
 
-        # 判斷勝負
-        if guess == target:
-            print(f"🎉 恭喜！你成功找到了數字 {target}！")
-            break
-        elif guess < target:
-            low = max(low, guess + 1)
-            print("太小了！")
-        else:
-            high = min(high, guess - 1)
-            print("太大了！")
-        
-        stamina -= 1
+提外使用套件：測試時是利用雲端的collab測試，所以有使用到下面套件以利程式執行
+Gradio：用於建立網頁介面（GUI）。它負責處理玩家的輸入（單選鈕、數字輸入）、顯示遊戲情報（文字框、標籤）以及按鈕的事件綁定。
 
-    if stamina <= 0:
-        print(f"\n💀 體力耗盡！你失敗了。答案是 {target}。")
-
-if __name__ == "__main__":
-    guess_number_game()
+# 分工說明
+為單人搭配AI(主以gemini)創作
