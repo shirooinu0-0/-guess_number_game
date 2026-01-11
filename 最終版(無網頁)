@@ -4,8 +4,8 @@ import random
 class TripleModeGame:
     def __init__(self):
         self.colors = ["🔴 紅色", "🟡 黃色", "🔵 藍色", "🟢 綠色", "🟣 紫色"]
-        self.max_stamina = 7
-        self.reset("經典生存戰", 7)
+        self.max_stamina = 10
+        self.reset("經典生存戰", 10)
 
     def reset(self, mode, max_stamina):
         self.mode = mode
