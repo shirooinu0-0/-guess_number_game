@@ -1,0 +1,133 @@
+import gradio as gr
+import random
+
+class TripleModeGame:
+    def __init__(self):
+        self.colors = ["🔴 紅色", "🟡 黃色", "🔵 藍色", "🟢 綠色", "🟣 紫色"]
+        self.max_stamina = 7
+        self.reset("經典生存戰", 7)
+
+    def reset(self, mode, max_stamina):
+        self.mode = mode
+        self.max_stamina = int(max_stamina)
+        self.stamina = self.max_stamina
+        self.target = random.randint(1, 100)
+        self.low, self.high = 1, 100
+        
+        # 屬性解碼戰專用標記
+        self.property_guessed = False 
+        self.target_property = "偶數" if self.target % 2 == 0 else "奇數"
+
+        if mode == "色彩偵查戰":
+            start = max(1, self.target - random.randint(5, 20))
+            self.num_range = list(range(start, min(101, start + 30)))
+            self.color_map = {n: random.choice(self.colors) for n in self.num_range}
+            self.target_color = self.color_map[self.target]
+
+        return self.get_ui_status()
+
+    def get_ui_status(self):
+        heart_icons = "❤️" * max(0, self.stamina)
+        status = f"❤️ 剩餘體力：{heart_icons} ({self.stamina}/{self.max_stamina})\n"
+        status += f"📏 目前範圍：{self.low} ~ {self.high}\n"
+        status += "="*30 + "\n"
+
+        if self.mode == "經典生存戰":
+            status += "【模式：經典】純粹的邏輯，沒有額外線索。"
+        elif self.mode == "屬性解碼戰":
+            if not self.property_guessed:
+                status += "【模式：屬性】第一步：請先在右側選擇奇偶數。\n(注意：首回合猜錯扣 2 顆心！)"
+            else:
+                status += f"【模式：屬性】情報確認：目標是一個【 {self.target_property} 】"
+        elif self.mode == "色彩偵查戰":
+            status += f"【模式：色彩】目標顏色是：【 {self.target_color} 】\n"
+            status += "🚨 注意：本模式難度較高，每次猜錯數字將扣除 2 顆心！\n"
+            matrix_str = "".join([f"{n:3d}:{self.color_map[n]}  " + ("\n" if (i+1)%5==0 else "") for i, n in enumerate(self.num_range)])
+            status += "--- 區域色彩矩陣 ---\n" + matrix_str
+
+        return status
+
+game = TripleModeGame()
+
+def play_engine(guess_num, mode, max_stamina, odd_even_guess):
+    if game.mode != mode or game.max_stamina != int(max_stamina):
+        game.reset(mode, max_stamina)
+        return "模式/難度已切換，遊戲重置！", game.get_ui_status()
+
+    # 屬性解碼戰首輪邏輯
+    if mode == "屬性解碼戰" and not game.property_guessed:
+        game.property_guessed = True
+        if odd_even_guess == game.target_property:
+            return f"✅ 預測正確！目標確實是 {game.target_property}。", game.get_ui_status()
+        else:
+            game.stamina -= 2
+            if game.stamina <= 0:
+                msg = f"💀 預測失敗且體力耗盡！答案是 {game.target}。"
+                game.reset(mode, max_stamina)
+                return msg, game.get_ui_status()
+            return f"❌ 預測錯誤！扣除 2 顆心。目標其實是 {game.target_property}。", game.get_ui_status()
+
+    if guess_num is None:
+        return "請輸入數字！", game.get_ui_status()
+
+    guess = int(guess_num)
+    if guess == game.target:
+        msg = f"🏆 恭喜！正確答案就是 {game.target}！"
+        game.reset(mode, max_stamina)
+        return msg, game.get_ui_status()
+
+    # 色彩偵查戰扣除 2 顆心，其餘模式扣 1 顆
+    penalty = 2 if mode == "色彩偵查戰" else 1
+    game.stamina -= penalty
+    
+    if game.stamina <= 0:
+        msg = f"💀 失敗！答案是 {game.target}。"
+        game.reset(mode, max_stamina)
+        return msg, game.get_ui_status()
+
+    # 提示語與血量扣除說明
+    penalty_msg = " (此模式猜錯扣 2 顆心)" if mode == "色彩偵查戰" else ""
+    if guess < game.target:
+        game.low = max(game.low, guess + 1)
+        res = f"🔻 太小了！{penalty_msg}"
+    else:
+        game.high = min(game.high, guess - 1)
+        res = f"🔺 太大了！{penalty_msg}"
+
+    return res, game.get_ui_status()
+
+# 建立 GUI
+with gr.Blocks(title="進化版猜數字：三位一體") as demo:
+    gr.Markdown("# 🔢 猜數字：三位一體進化版")
+
+    with gr.Row():
+        mode_radio = gr.Radio(["經典生存戰", "屬性解碼戰", "色彩偵查戰"], label="選擇挑戰模式", value="經典生存戰")
+        stamina_radio = gr.Radio([15, 10, 5], label="選擇初始血量 (難度)", value=10)
+
+    with gr.Row():
+        with gr.Column(scale=2):
+            display_panel = gr.Textbox(label="戰術情報顯示", lines=15, interactive=False)
+        with gr.Column(scale=1):
+            odd_even_ui = gr.Radio(["奇數", "偶數"], label="奇偶預測 (僅屬性解碼戰首回合)", visible=False)
+            input_box = gr.Number(label="輸入你的預測值", precision=0)
+            btn_submit = gr.Button("提交預測", variant="primary")
+            msg_label = gr.Label(label="偵測反饋")
+            btn_reset = gr.Button("強制重置遊戲")
+
+    def update_ui_visibility(mode):
+        return gr.update(visible=(mode == "屬性解碼戰"))
+
+    mode_radio.change(update_ui_visibility, inputs=mode_radio, outputs=odd_even_ui)
+
+    common_inputs = [input_box, mode_radio, stamina_radio, odd_even_ui]
+    btn_submit.click(play_engine, inputs=common_inputs, outputs=[msg_label, display_panel])
+    input_box.submit(play_engine, inputs=common_inputs, outputs=[msg_label, display_panel])
+    
+    def handle_reset(m, s): return game.reset(m, s)
+    btn_reset.click(handle_reset, inputs=[mode_radio, stamina_radio], outputs=display_panel)
+    mode_radio.change(handle_reset, inputs=[mode_radio, stamina_radio], outputs=display_panel)
+    stamina_radio.change(handle_reset, inputs=[mode_radio, stamina_radio], outputs=display_panel)
+
+    demo.load(lambda: game.get_ui_status(), outputs=display_panel)
+
+demo.launch()
