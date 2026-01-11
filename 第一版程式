@@ -1,0 +1,59 @@
+import random
+
+def guess_number_game():
+    print("--- 歡迎來到『終極密碼：生存戰』 ---")
+
+    # 設定遊戲難度與參數
+    target = random.randint(1, 100)
+    stamina = 7  # 特色玩法 1：體力限制
+    hints_available = 2  # 特色玩法 2：有限的提示道具
+    low, high = 1, 100
+
+    print(f"數字範圍在 {low} 到 {high} 之間。")
+    print(f"你有 {stamina} 點體力，每猜錯一次扣 1 點。")
+    print(f"輸入 'h' 可以使用提示（消耗 2 點體力，剩餘 {hints_available} 次）。")
+
+    while stamina > 0:
+        print(f"\n目前範圍：{low} ~ {high} | 剩餘體力：{'❤️' * stamina}")
+        user_input = input("請輸入數字或指令: ").lower()
+
+        # 特色功能：提示系統
+        if user_input == 'h':
+            if hints_available > 0 and stamina > 2:
+                hints_available -= 1
+                stamina -= 2
+                # 提供一個更小的範圍提示
+                new_gap = (high - low) // 4
+                hint_low = max(low, target - random.randint(0, new_gap))
+                hint_high = min(high, target + random.randint(0, new_gap))
+                print(f"【道具：偵查雷達】提示：數字大機率在 {hint_low} 到 {hint_high} 之間！")
+                continue
+            else:
+                print("體力不足以支付提示或道具已用完！")
+                continue
+
+        # 檢查輸入是否為數字
+        try:
+            guess = int(user_input)
+        except ValueError:
+            print("無效輸入，請輸入數字或 'h'。")
+            continue
+
+        # 判斷勝負
+        if guess == target:
+            print(f"🎉 恭喜！你成功找到了數字 {target}！")
+            break
+        elif guess < target:
+            low = max(low, guess + 1)
+            print("太小了！")
+        else:
+            high = min(high, guess - 1)
+            print("太大了！")
+
+        stamina -= 1
+
+    if stamina <= 0:
+        print(f"\n💀 體力耗盡！你失敗了。答案是 {target}。")
+
+if __name__ == "__main__":
+    guess_number_game()
